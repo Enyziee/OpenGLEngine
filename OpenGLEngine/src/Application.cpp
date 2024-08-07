@@ -10,6 +10,8 @@
 #include "stb_image.h"
 
 #include "ShaderProgram.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
 #define ASSERT(x) if (!(x)) __debugbreak();
 #define GLCall(x) GLClearError();\
@@ -39,7 +41,7 @@ void process_input(GLFWwindow* window) {
         glfwSetWindowShouldClose(window, true);
     }
     else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
     }
 }
 
@@ -78,6 +80,8 @@ int main(void) {
     glViewport(0, 0, WIDTH, HEIGHT);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    stbi_set_flip_vertically_on_load(true);
+
     float vertices[] = {
         // positions          // colors           // texture coords
          0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
@@ -98,37 +102,22 @@ int main(void) {
     };
     
     uint32_t VAO;
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
+    GLCall(glGenVertexArrays(1, &VAO));
+    GLCall(glBindVertexArray(VAO));
 
-    uint32_t EBO;
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    uint32_t VBO;
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);    
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    
+    IndexBuffer index1 = IndexBuffer(indices, sizeof(indices));
+    VertexBuffer object1 = VertexBuffer(vertices, sizeof(vertices));
     ShaderProgram basicShader = ShaderProgram("res/shader/Basic.shader");
     
     // loadind texture
     int width, height, nrChannels;
     unsigned char* data = stbi_load("res/textures/container.jpg", &width, &height, &nrChannels, 0);
+    
+    
 
-    uint32_t textureId;
-    glGenTextures(1, &textureId);
-    glBindTexture(GL_TEXTURE_2D, textureId);
+    uint32_t texture1;
+    glGenTextures(1, &texture1);
+    glBindTexture(GL_TEXTURE_2D, texture1);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -139,6 +128,21 @@ int main(void) {
     glGenerateMipmap(GL_TEXTURE_2D);
 
     stbi_image_free(data);
+    
+    
+    unsigned char* data2 = stbi_load("./res/textures/awesomeface.png", &width, &height, &nrChannels, 0);
+
+    uint32_t texture2;
+    glGenTextures(1, &texture2);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data2);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     while (!glfwWindowShouldClose(window)) {
         
@@ -150,7 +154,14 @@ int main(void) {
         float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
         
         basicShader.bind();
-        basicShader.setUniform4f(0.0f, greenValue, 0.0f, 1.0f, "greenColor");
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+
+        basicShader.setUniform1i("texture1", 0);
+        basicShader.setUniform1i("texture2", 1);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);

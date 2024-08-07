@@ -8,15 +8,17 @@ struct ShaderSource {
 };
 
 class ShaderProgram {
-    uint32_t m_ProgramId;
+    uint32_t m_RendererID;
 
 public:
+    
     ShaderProgram(std::string path);
 
     void bind();
     void unbind();
 
-    void setUniform4f(float x, float y, float z, float a, const char* uniform);
+    void setUniform4f(const char* uniform, float x, float y, float z, float a);
+    void setUniform1i(const char* uniform, int value);
 
 private:
     ShaderSource parseShaderFile(std::string shaderPath);

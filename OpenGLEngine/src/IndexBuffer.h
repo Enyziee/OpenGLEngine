@@ -3,9 +3,13 @@
 #include <iostream>
 
 class IndexBuffer {
-    uint32_t m_BufferId;
+    uint32_t m_RendererID;
+    uint32_t m_Count;
+
 public:
-    IndexBuffer(float indexes[]);
+    IndexBuffer(unsigned int* indexes, int count);
+    ~IndexBuffer();
+
     void bind();
     void unbind();
 };

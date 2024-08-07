@@ -7,37 +7,60 @@
 #include <string>
 #include <sstream>
 
+#define ASSERT(x) if (!(x)) __debugbreak();
+#define GLCall(x) GLClearError();\
+    x;\
+    ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+
+static void GLClearError() {
+    while (glGetError() != GL_NO_ERROR);
+}
+
+static bool GLLogCall(const char* function, const char* file, int line) {
+    while (GLenum error = glGetError()) {
+        std::cout << "[OpenGL Error] (" << error << ")" << function <<
+            " " << file << ":" << line << std::endl;
+        return false;
+    }
+    return true;
+}
+
 ShaderProgram::ShaderProgram(std::string path) {
     ShaderSource shaders = parseShaderFile(path);
 
-    m_ProgramId = glCreateProgram();
+    m_RendererID = glCreateProgram();
     uint32_t vertex = compileShader(shaders.VertexSource, GL_VERTEX_SHADER);
     uint32_t frag = compileShader(shaders.FragmentSource, GL_FRAGMENT_SHADER);
 
-    glAttachShader(m_ProgramId, vertex);
-    glAttachShader(m_ProgramId, frag);
-    glLinkProgram(m_ProgramId);
+    GLCall(glAttachShader(m_RendererID, vertex));
+    GLCall(glAttachShader(m_RendererID, frag));
+    GLCall(glLinkProgram(m_RendererID));
 
     int sucess;
-    glGetProgramiv(m_ProgramId, GL_LINK_STATUS, &sucess);
+    glGetProgramiv(m_RendererID, GL_LINK_STATUS, &sucess);
     if (!sucess) {
         char infoLog[512];
-        glGetProgramInfoLog(m_ProgramId, 512, NULL, infoLog);
+        glGetProgramInfoLog(m_RendererID, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
 }
 
 void ShaderProgram::bind() {
-    glUseProgram(m_ProgramId);
+    glUseProgram(m_RendererID);
 }
 
 void ShaderProgram::unbind() {
     glUseProgram(0);
 }
 
-void ShaderProgram::setUniform4f(float x, float y, float z, float a, const char* uniform) {
-    int vLocation = glGetUniformLocation(this->m_ProgramId, uniform);
+void ShaderProgram::setUniform4f(const char* uniform, float x, float y, float z, float a) {
+    int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
     glUniform4f(vLocation, x, y, z, a);
+}
+
+void ShaderProgram::setUniform1i(const char* uniform, int value) {
+    int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+    glUniform1i(uniformId, value);
 }
 
 ShaderSource ShaderProgram::parseShaderFile(std::string shaderPath) {
