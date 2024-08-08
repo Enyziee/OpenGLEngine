@@ -63,6 +63,11 @@ void ShaderProgram::setUniform1i(const char* uniform, int value) {
     glUniform1i(uniformId, value);
 }
 
+void ShaderProgram::setUniformMatrix4fv(const char* uniform, glm::f32* value) {
+    int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+    GLCall(glUniformMatrix4fv(uniformId, 1, GL_FALSE, value));
+}
+
 ShaderSource ShaderProgram::parseShaderFile(std::string shaderPath) {
     std::ifstream sourceFile(shaderPath);
 

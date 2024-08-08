@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <glm/glm.hpp>
 
 struct ShaderSource {
     std::string VertexSource;
@@ -19,6 +20,8 @@ public:
 
     void setUniform4f(const char* uniform, float x, float y, float z, float a);
     void setUniform1i(const char* uniform, int value);
+    
+    void setUniformMatrix4fv(const char* uniform, glm::f32* value);
 
 private:
     ShaderSource parseShaderFile(std::string shaderPath);
