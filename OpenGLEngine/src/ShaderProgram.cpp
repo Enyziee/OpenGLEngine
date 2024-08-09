@@ -20,6 +20,10 @@ ShaderProgram::ShaderProgram(std::string path) {
     }
 }
 
+ShaderProgram::~ShaderProgram() {
+    GLCall(glDeleteProgram(m_RendererID));
+}
+
 void ShaderProgram::bind() {
     GLCall(glUseProgram(m_RendererID);)
 }

@@ -19,6 +19,7 @@ class ShaderProgram {
 public:
     
     ShaderProgram(std::string path);
+    ~ShaderProgram();
 
     void bind();
     void unbind();

@@ -24,7 +24,7 @@ glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-
+float fov = 45.0f;
 float yaw = -90.0f;
 float pitch = 0.0f;
 float roll = 0.0f;
@@ -34,13 +34,29 @@ float lastFrame = 0.0f;
 
 float lastX, lastY;
 bool firstMouse = true;
+
+// Engine settings
+
+bool fullScreen = false;
+bool paused = false;
+
+void static scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    fov -= (float)yoffset;
+
+    if (fov < 1.0f) {
+        fov = 1.0f;
+    } 
+    if (fov > 45.0f) {
+        fov = 45.0f;
+    }
+}
+
 void static mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (firstMouse) {
         lastX = xpos;
         lastY = ypos;
         firstMouse = false;
     }
-
 
     double xoffset = xpos - lastX;
     double yoffset = ypos  - lastY ;
@@ -144,6 +160,7 @@ int main(void) {
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
     stbi_set_flip_vertically_on_load(true);
 
     float vertices3[] = {
@@ -309,7 +326,6 @@ int main(void) {
             float angle = 20.0f * i;
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             basicShader.setUniformMatrix4fv("model", glm::value_ptr(model));
-            
 
             GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
         }
@@ -319,6 +335,8 @@ int main(void) {
         glfwSwapBuffers(window);        
         glfwPollEvents();
     }
+
+    
 
     glfwTerminate();
     return 0;
