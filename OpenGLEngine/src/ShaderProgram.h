@@ -1,7 +1,12 @@
 #pragma once
 
-#include <iostream>
+#include "glcommon.h"
+
 #include <glm/glm.hpp>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 struct ShaderSource {
     std::string VertexSource;

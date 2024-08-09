@@ -1,6 +1,6 @@
 #pragma once
 
-#include <iostream>
+#include "glcommon.h"
 
 class VertexBuffer {
 	uint32_t m_RendererID;

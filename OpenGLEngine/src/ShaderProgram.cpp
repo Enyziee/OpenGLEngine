@@ -1,30 +1,5 @@
 #include "ShaderProgram.h"
 
-#include <glad/glad.h>
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-
-#define ASSERT(x) if (!(x)) __debugbreak();
-#define GLCall(x) GLClearError();\
-    x;\
-    ASSERT(GLLogCall(#x, __FILE__, __LINE__))
-
-static void GLClearError() {
-    while (glGetError() != GL_NO_ERROR);
-}
-
-static bool GLLogCall(const char* function, const char* file, int line) {
-    while (GLenum error = glGetError()) {
-        std::cout << "[OpenGL Error] (" << error << ")" << function <<
-            " " << file << ":" << line << std::endl;
-        return false;
-    }
-    return true;
-}
-
 ShaderProgram::ShaderProgram(std::string path) {
     ShaderSource shaders = parseShaderFile(path);
 
@@ -46,21 +21,21 @@ ShaderProgram::ShaderProgram(std::string path) {
 }
 
 void ShaderProgram::bind() {
-    glUseProgram(m_RendererID);
+    GLCall(glUseProgram(m_RendererID);)
 }
 
 void ShaderProgram::unbind() {
-    glUseProgram(0);
+    GLCall(glUseProgram(0));
 }
 
 void ShaderProgram::setUniform4f(const char* uniform, float x, float y, float z, float a) {
     int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
-    glUniform4f(vLocation, x, y, z, a);
+    GLCall(glUniform4f(vLocation, x, y, z, a));
 }
 
 void ShaderProgram::setUniform1i(const char* uniform, int value) {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
-    glUniform1i(uniformId, value);
+    GLCall(glUniform1i(uniformId, value));
 }
 
 void ShaderProgram::setUniformMatrix4fv(const char* uniform, glm::f32* value) {

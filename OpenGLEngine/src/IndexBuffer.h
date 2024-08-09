@@ -1,13 +1,13 @@
 #pragma once
 
-#include <iostream>
+#include "glcommon.h"
 
 class IndexBuffer {
     uint32_t m_RendererID;
     uint32_t m_Count;
 
 public:
-    IndexBuffer(unsigned int* indexes, int count);
+    IndexBuffer(uint32_t* indexes, int count);
     ~IndexBuffer();
 
     void bind();
