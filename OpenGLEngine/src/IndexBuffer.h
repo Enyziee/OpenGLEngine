@@ -1,6 +1,7 @@
 #pragma once
 
-#include "glcommon.h"
+#include <iostream>
+#include "GLLog.h"
 
 class IndexBuffer {
     uint32_t m_RendererID;
@@ -10,6 +11,8 @@ public:
     IndexBuffer(uint32_t* indexes, int count);
     ~IndexBuffer();
 
-    void bind();
-    void unbind();
+    int getCount() const;
+
+    void bind() const;
+    void unbind() const;
 };

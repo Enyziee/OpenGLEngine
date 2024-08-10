@@ -3,6 +3,8 @@
 #include <vector>
 #include <glad/glad.h>
 
+#include "GLLog.h"
+
 struct VertexBufferElement {
 	unsigned int type;
 	unsigned int count;	

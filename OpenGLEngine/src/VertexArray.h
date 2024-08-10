@@ -1,8 +1,9 @@
 #pragma once
 
-#include "glcommon.h"
+#include "GLLog.h"
 #include "VertexBuffer.h"
 #include "VertexBufferLayout.h"
+
 
 class VertexArray {
 	uint32_t m_RendererID;
@@ -15,7 +16,4 @@ public:
 
 	void bind() const;
 	void unbind() const;
-
-private:
-
 };

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "glcommon.h"
-
 #include <glm/glm.hpp>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
+
+#include "GLLog.h"
 
 struct ShaderSource {
     std::string VertexSource;

@@ -18,6 +18,9 @@ ShaderProgram::ShaderProgram(std::string path) {
         glGetProgramInfoLog(m_RendererID, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
+
+    GLCall(glDeleteShader(vertex));
+    GLCall(glDeleteShader(frag));
 }
 
 ShaderProgram::~ShaderProgram() {

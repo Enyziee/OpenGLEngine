@@ -1,24 +1,25 @@
-#include "glcommon.h"
+#include "Renderer.h"
 #include <GLFW/glfw3.h>
 
-#include <iostream>
-#include <string>
-#include <sstream>
 #include <fstream>
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image/stb_image.h"
-
+#include <iostream>
+#include <sstream>
+#include <string>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "ShaderProgram.h"
-#include "VertexBuffer.h"
+#include <cctype>
+
 #include "IndexBuffer.h"
+#include "ShaderProgram.h"
 #include "VertexArray.h"
+#include "VertexBuffer.h"
 #include "VertexBufferLayout.h"
+
+#include "GLLog.h"
+#include "Texture.h"
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -34,8 +35,6 @@ float lastFrame = 0.0f;
 
 float lastX, lastY;
 bool firstMouse = true;
-
-// Engine settings
 
 bool fullScreen = false;
 bool paused = false;
@@ -59,7 +58,7 @@ void static mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     }
 
     double xoffset = xpos - lastX;
-    double yoffset = ypos  - lastY ;
+    double yoffset = lastY - ypos;
     lastX = xpos;
     lastY = ypos;
 
@@ -73,7 +72,7 @@ void static mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (pitch > 89.0f) {
         pitch = 89.0f;
     }
-    if (pitch > -89.0f) {
+    if (pitch < -89.0f) {
         pitch = -89.0f;
     }
 
@@ -83,6 +82,71 @@ void static mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     cameraFront = glm::normalize(direction);
+}
+
+void static load_obj(std::string path, std::vector<float>* vertices, std::vector<uint32_t>* indexes) {
+    std::ifstream file(path);
+
+    if (!file) {
+        std::cout << "Cannot open the file" << std::endl;
+        return;
+    }
+
+    std::string line;
+    
+    while (getline(file, line)) {
+        if (line.find("v ") != std::string::npos) {
+            std::string number;
+
+            for (int i = 2; i < line.size(); i++) {
+                char ch = line[i];
+
+                if (isblank(ch)) {
+                    float value = std::stod(number);
+                    vertices->push_back(value);
+                    number.clear();
+                    continue;
+                }
+
+                if (i == (line.size() - 1)) {
+                    number.push_back(ch);
+
+                    float value = std::stod(number);
+                    vertices->push_back(value);
+                    number.clear();
+                    continue;
+                }
+
+                number.push_back(ch);
+            }
+        }
+        if (line.find("f ") != std::string::npos) {
+            std::string number;
+
+            for (int i = 2; i < line.size(); i++) {
+                char ch = line[i];
+
+                if (isblank(ch)) {
+                    uint32_t value = std::stoi(number) - 1;
+                    indexes->push_back(value);
+                    number.clear();
+                    continue;
+                }
+
+                if (i == (line.size() - 1)) {
+                    number.push_back(ch);
+
+                    uint32_t value = std::stoi(number) - 1;
+                    indexes->push_back(value);
+                    number.clear();
+                    continue;
+                }
+
+                number.push_back(ch);
+            }
+        }
+    }
+
 }
 
 void static process_input(GLFWwindow* window) {
@@ -101,6 +165,13 @@ void static process_input(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
         GLCall(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
         std::cout << "Wireframe mode disabled" << std::endl;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        cameraPos -= cameraSpeed * cameraUp;
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        cameraPos += cameraSpeed * cameraUp;
     }
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -127,7 +198,6 @@ int main(void) {
     const int WIDTH = 800;
     const int HEIGHT = 600;
 
-    /* Initialize the library */
     if (!glfwInit()) {
         std::cout << "Failed to initialize GLFW" << std::endl;
         return -1;
@@ -161,17 +231,8 @@ int main(void) {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
-    stbi_set_flip_vertically_on_load(true);
 
-    float vertices3[] = {
-        // positions          // colors           // texture coords
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
-    };
-
-    float vertices[] = {
+    float cubeVertices[] = {
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
@@ -215,65 +276,18 @@ int main(void) {
     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
-    float texCoords[] = {
-        0.0f, 0.0f,  // lower-left corner  
-        1.0f, 0.0f,  // lower-right corner
-        0.5f, 1.0f   // top-center corner
-    };
-
-    unsigned int indices[] = {  // note that we start from 0!
-        0, 1, 3,   // first triangle
-        1, 2, 3    // second triangle
-    };
-
-    VertexBufferLayout layout;
-    layout.Push<float>(3);
-    layout.Push<float>(2);
-
-    //IndexBuffer index1 = IndexBuffer(indices, sizeof(indices));
-    VertexBuffer object1 = VertexBuffer(vertices, sizeof(vertices));
-    ShaderProgram basicShader = ShaderProgram("res/shader/Basic.shader");
-
-    VertexArray vao = VertexArray();
+    VertexBufferLayout cubeLayout;
+    cubeLayout.Push<float>(3);
+    cubeLayout.Push<float>(2);
     
-    vao.addData(object1, layout);
-
+    VertexBuffer cubeVertex = VertexBuffer(cubeVertices, 180);
+    ShaderProgram shader = ShaderProgram("res/shader/Basic.shader");
     
-    // loadind texture
-    int width, height, nrChannels;
-    unsigned char* data = stbi_load("res/textures/container.jpg", &width, &height, &nrChannels, 0);
-    uint32_t texture1;
-    GLCall(glGenTextures(1, &texture1));
-    GLCall(glBindTexture(GL_TEXTURE_2D, texture1));
+    VertexArray cubeVA = VertexArray();
+    cubeVA.addData(cubeVertex, cubeLayout);
 
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-
-    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data));
-    GLCall(glGenerateMipmap(GL_TEXTURE_2D));
-    
-    unsigned char* data2 = stbi_load("./res/textures/awesomeface.png", &width, &height, &nrChannels, 0);
-
-    uint32_t texture2;
-    GLCall(glGenTextures(1, &texture2));
-    GLCall(glBindTexture(GL_TEXTURE_2D, texture2));
-
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
-    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-
-    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data2));
-    GLCall(glGenerateMipmap(GL_TEXTURE_2D));
-
-    stbi_image_free(data);
-    stbi_image_free(data2);
-
-    basicShader.bind();
-    basicShader.setUniform1i("texture1", 0);
-    basicShader.setUniform1i("texture2", 1);
+    Texture texture1("./res/textures/container.jpg");
+    Texture texture2("./res/textures/awesomeface.png");
 
     glm::vec3 cubePositions[] = {
         glm::vec3(0.0f,  0.0f,  0.0f),
@@ -288,55 +302,65 @@ int main(void) {
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
 
+    std::vector<float>* teapotVertex = new std::vector<float>;
+    std::vector<uint32_t>* teapotIndex = new std::vector<uint32_t>;
+
+    load_obj("./res/objects/Txotas.obj", teapotVertex, teapotIndex);
+    VertexBufferLayout loadedLayot;
+    loadedLayot.Push<float>(3);
+
+    IndexBuffer loadedIB = IndexBuffer(teapotIndex->data(), teapotIndex->size());
+    VertexBuffer loadedVB = VertexBuffer(teapotVertex->data(), teapotVertex->size());
+    
+    VertexArray loadedVA = VertexArray();
+    loadedVA.addData(loadedVB, loadedLayot);
+
+    Renderer renderer = Renderer();
+
     while (!glfwWindowShouldClose(window)) {
         
+        renderer.clear();
+
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
+        
         process_input(window);
         
-        GLCall(glClearColor(0.2f, 0.3f, 0.3f, 1.0f));
-        GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+        glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-        GLCall(glActiveTexture(GL_TEXTURE0));
-        GLCall(glBindTexture(GL_TEXTURE_2D, texture1));
-        GLCall(glActiveTexture(GL_TEXTURE1));
-        GLCall(glBindTexture(GL_TEXTURE_2D, texture2));
+        texture1.bind(0);
+        texture2.bind(1);
 
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::lookAt(
-            cameraPos,
-            cameraPos + cameraFront,
-            cameraUp
-        );
+        shader.bind();
+        shader.setUniform1i("texture1", 0);
+        shader.setUniform1i("texture2", 1);
 
-        glm::mat4 projection;
-        projection = glm::perspective(glm::radians(45.0f), (float)HEIGHT / (float)WIDTH, 0.1f, 100.0f);
-        
-        vao.bind();
-        basicShader.bind();
+        shader.setUniformMatrix4fv("projection", glm::value_ptr(projection));
+        shader.setUniformMatrix4fv("view", glm::value_ptr(view));
 
-        basicShader.setUniformMatrix4fv("projection", glm::value_ptr(projection));
-        basicShader.setUniformMatrix4fv("view", glm::value_ptr(view));
+        for (unsigned int i = 0; i < 10; i++) {
+            cubeVA.bind();
 
-        for (uint32_t i = 0; i < 10; i++) {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i;
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            basicShader.setUniformMatrix4fv("model", glm::value_ptr(model));
-
+            shader.setUniformMatrix4fv("model", glm::value_ptr(model));
             GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
+            cubeVA.unbind();
         }
 
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);        
 
-        glfwSwapBuffers(window);        
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 15.0f));
+        shader.setUniformMatrix4fv("model", glm::value_ptr(model));
+        renderer.draw(loadedVA, loadedIB);
+
+        glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    
 
     glfwTerminate();
     return 0;
