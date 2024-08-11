@@ -1,11 +1,11 @@
 #pragma once
 
+#include <glad/glad.h>
 #include <iostream>
-#include "GLLog.h"
 
 class IndexBuffer {
-    uint32_t m_RendererID;
-    uint32_t m_Count;
+    unsigned int m_RendererID;
+    unsigned int m_Count;
 
 public:
     IndexBuffer(uint32_t* indexes, int count);

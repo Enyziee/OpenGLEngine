@@ -1,8 +1,7 @@
 #pragma once
 
 #include "stb_image/stb_image.h"
-
-#include "GLLog.h"
+#include <glad/glad.h>
 
 class Texture {
 	unsigned int m_RendererID;

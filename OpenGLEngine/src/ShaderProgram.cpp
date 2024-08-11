@@ -4,12 +4,12 @@ ShaderProgram::ShaderProgram(std::string path) {
     ShaderSource shaders = parseShaderFile(path);
 
     m_RendererID = glCreateProgram();
-    uint32_t vertex = compileShader(shaders.VertexSource, GL_VERTEX_SHADER);
-    uint32_t frag = compileShader(shaders.FragmentSource, GL_FRAGMENT_SHADER);
+    unsigned int  vertex = compileShader(shaders.VertexSource, GL_VERTEX_SHADER);
+    unsigned int  frag = compileShader(shaders.FragmentSource, GL_FRAGMENT_SHADER);
 
-    GLCall(glAttachShader(m_RendererID, vertex));
-    GLCall(glAttachShader(m_RendererID, frag));
-    GLCall(glLinkProgram(m_RendererID));
+    glAttachShader(m_RendererID, vertex);
+    glAttachShader(m_RendererID, frag);
+    glLinkProgram(m_RendererID);
 
     int sucess;
     glGetProgramiv(m_RendererID, GL_LINK_STATUS, &sucess);
@@ -19,35 +19,35 @@ ShaderProgram::ShaderProgram(std::string path) {
         std::cout << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
 
-    GLCall(glDeleteShader(vertex));
-    GLCall(glDeleteShader(frag));
+    glDeleteShader(vertex);
+    glDeleteShader(frag);
 }
 
 ShaderProgram::~ShaderProgram() {
-    GLCall(glDeleteProgram(m_RendererID));
+    glDeleteProgram(m_RendererID);
 }
 
-void ShaderProgram::bind() {
-    GLCall(glUseProgram(m_RendererID);)
+void ShaderProgram::bind() const {
+    glUseProgram(m_RendererID);
 }
 
-void ShaderProgram::unbind() {
-    GLCall(glUseProgram(0));
+void ShaderProgram::unbind() const {
+    glUseProgram(0);
 }
 
-void ShaderProgram::setUniform4f(const char* uniform, float x, float y, float z, float a) {
+void ShaderProgram::setUniform4f(const char* uniform, float x, float y, float z, float a) const {
     int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
-    GLCall(glUniform4f(vLocation, x, y, z, a));
+    glUniform4f(vLocation, x, y, z, a);
 }
 
-void ShaderProgram::setUniform1i(const char* uniform, int value) {
+void ShaderProgram::setUniform1i(const char* uniform, int value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
-    GLCall(glUniform1i(uniformId, value));
+    glUniform1i(uniformId, value);
 }
 
-void ShaderProgram::setUniformMatrix4fv(const char* uniform, glm::f32* value) {
+void ShaderProgram::setUniformMatrix4fv(const char* uniform, glm::f32* value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
-    GLCall(glUniformMatrix4fv(uniformId, 1, GL_FALSE, value));
+    glUniformMatrix4fv(uniformId, 1, GL_FALSE, value);
 }
 
 ShaderSource ShaderProgram::parseShaderFile(std::string shaderPath) {
@@ -85,8 +85,8 @@ ShaderSource ShaderProgram::parseShaderFile(std::string shaderPath) {
     return { ss[0].str(), ss[1].str() };
 }
 
-uint32_t ShaderProgram::compileShader(std::string shaderSource, uint32_t type) {
-    uint32_t shader = glCreateShader(type);
+uint32_t ShaderProgram::compileShader(std::string shaderSource, unsigned int type) {
+    unsigned int shader = glCreateShader(type);
     const char* source = shaderSource.c_str();
     int sucess;
 

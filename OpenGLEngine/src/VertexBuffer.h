@@ -1,14 +1,15 @@
 #pragma once
 
-#include "GLLog.h"
+#include <glad/glad.h>
+#include <iostream>
 
 class VertexBuffer {
-	uint32_t m_RendererID;
+	unsigned int m_RendererID;
 
 public:
 	VertexBuffer(float *data, int size);
 	~VertexBuffer();
 
 	void bind() const;
-	void unbind();
+	void unbind() const;
 };

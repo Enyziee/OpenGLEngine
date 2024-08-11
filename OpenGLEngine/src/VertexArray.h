@@ -1,12 +1,12 @@
 #pragma once
 
-#include "GLLog.h"
+#include <glad/glad.h>
 #include "VertexBuffer.h"
 #include "VertexBufferLayout.h"
 
 
 class VertexArray {
-	uint32_t m_RendererID;
+	unsigned int m_RendererID;
 
 public:
 	VertexArray();
