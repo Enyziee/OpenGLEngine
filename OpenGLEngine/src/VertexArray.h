@@ -4,7 +4,6 @@
 #include "VertexBuffer.h"
 #include "VertexBufferLayout.h"
 
-
 class VertexArray {
 	unsigned int m_RendererID;
 

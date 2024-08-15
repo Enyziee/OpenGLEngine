@@ -1,11 +1,19 @@
 #include "ShaderProgram.h"
 
-ShaderProgram::ShaderProgram(std::string path) {
-    ShaderSource shaders = parseShaderFile(path);
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+ShaderProgram::ShaderProgram(std::string vertPath, std::string fragPath) {
+    std::string vertexSource = parseShaderFile(vertPath);
+    std::string fragmentSource = parseShaderFile(fragPath);
+
+    unsigned int  vertex = compileShader(vertexSource, GL_VERTEX_SHADER);
+    unsigned int  frag = compileShader(fragmentSource, GL_FRAGMENT_SHADER);
 
     m_RendererID = glCreateProgram();
-    unsigned int  vertex = compileShader(shaders.VertexSource, GL_VERTEX_SHADER);
-    unsigned int  frag = compileShader(shaders.FragmentSource, GL_FRAGMENT_SHADER);
+    std::cout << "Created shader program ID: " << m_RendererID << std::endl;
+
 
     glAttachShader(m_RendererID, vertex);
     glAttachShader(m_RendererID, frag);
@@ -45,47 +53,30 @@ void ShaderProgram::setUniform1i(const char* uniform, int value) const {
     glUniform1i(uniformId, value);
 }
 
-void ShaderProgram::setUniformMatrix4fv(const char* uniform, glm::f32* value) const {
+void ShaderProgram::setUniformMatrix4fv(const char* uniform, glm::mat4 value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
-    glUniformMatrix4fv(uniformId, 1, GL_FALSE, value);
+    glUniformMatrix4fv(uniformId, 1, GL_FALSE, glm::value_ptr(value));
 }
 
-ShaderSource ShaderProgram::parseShaderFile(std::string shaderPath) {
+std::string ShaderProgram::parseShaderFile(std::string shaderPath) {
     std::ifstream sourceFile(shaderPath);
 
     if (!sourceFile) {
         std::cout << "Cannot open the file" << std::endl;
     }
 
-    enum ShaderType {
-        NONE = -1, VERTEX = 0, FRAGMENT = 1
-    };
-
     std::string line;
-    std::stringstream ss[2];
-    ShaderType type = ShaderType::NONE;
+    std::stringstream ss;
+
 
     while (getline(sourceFile, line)) {
-
-        if (line.find("#shader") != std::string::npos) {
-
-            if (line.find("vertex") != std::string::npos) {
-                type = ShaderType::VERTEX;
-            }
-            else if (line.find("fragment") != std::string::npos) {
-                type = ShaderType::FRAGMENT;
-            }
-
-        }
-        else {
-            ss[(int)type] << line << '\n';
-        }
+        ss << line << '\n';
     }
 
-    return { ss[0].str(), ss[1].str() };
+    return ss.str();
 }
 
-uint32_t ShaderProgram::compileShader(std::string shaderSource, unsigned int type) {
+unsigned int ShaderProgram::compileShader(std::string shaderSource, unsigned int type) {
     unsigned int shader = glCreateShader(type);
     const char* source = shaderSource.c_str();
     int sucess;
@@ -97,7 +88,16 @@ uint32_t ShaderProgram::compileShader(std::string shaderSource, unsigned int typ
     if (!sucess) {
         char infoLog[512];
         glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        std::cout << "Shader compilation failed\n" << infoLog << std::endl;
+        std::cerr << "Shader compilation failed\n" << infoLog << std::endl;
+    }
+
+    if (type == GL_VERTEX_SHADER) {
+        std::cout << "Created Vertex Shader ID: " << shader << std::endl;
+    } else if (type == GL_FRAGMENT_SHADER) {
+        std::cout << "Created Fragment Shader ID: " << shader << std::endl;
+    }
+    else {
+        std::cout << "Created Unknown Shader ID: " << shader << std::endl;
     }
 
     return shader;

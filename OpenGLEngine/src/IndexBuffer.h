@@ -8,11 +8,16 @@ class IndexBuffer {
     unsigned int m_Count;
 
 public:
-    IndexBuffer(uint32_t* indexes, int count);
+    IndexBuffer();
+    IndexBuffer(int* indexes, size_t count);
     ~IndexBuffer();
+
+    void loadData(int* indexes, size_t count);
 
     int getCount() const;
 
     void bind() const;
     void unbind() const;
+private:
+    
 };

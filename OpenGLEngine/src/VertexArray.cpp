@@ -2,6 +2,8 @@
 
 VertexArray::VertexArray() {
 	glGenVertexArrays(1, &m_RendererID);
+	glBindVertexArray(m_RendererID);
+	std::cout << "Created Vertex Array ID: " << m_RendererID << std::endl;
 }
 
 VertexArray::~VertexArray() {
