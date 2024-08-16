@@ -241,6 +241,10 @@
   <ItemGroup>
     <None Include="res\shader\default.frag" />
     <None Include="res\shader\default.vert" />
+    <None Include="res\shader\flat_color.frag" />
+    <None Include="res\shader\flat_color.vert" />
+    <None Include="res\shader\light.frag" />
+    <None Include="res\shader\light.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

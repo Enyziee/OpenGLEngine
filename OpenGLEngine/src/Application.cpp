@@ -9,21 +9,27 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <rapidobj/rapidobj.hpp>
+
 #include "Log.h"
 #include "Camera.h"
 #include "Renderer.h"
-#include <rapidobj/rapidobj.hpp>
 #include "ShaderProgram.h"
 #include "Object.h"
+#include "Texture.h"
+
+static float cameraRotation[3] = { -90.0f, 0.0f, 0.0f };
+
+bool firstMouse = true;
+bool mouseEnabled = false;
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+float lastX = 640;
+float lastY = 360;
 
 
-static void APIENTRY glDebugOutput(GLenum source,
-	GLenum type,
-	unsigned int id,
-	GLenum severity,
-	GLsizei length,
-	const char* message,
-	const void* userParam) {
+static void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity,  GLsizei length, const char* message, const void* userParam) {
 	// ignore non-significant error/warning codes
 	if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
 
@@ -59,9 +65,6 @@ static void APIENTRY glDebugOutput(GLenum source,
 	} std::cout << std::endl;
 }
 
-bool firstMouse = true;
-bool mouseEnabled = false;
-
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	switch (key) {
 	case GLFW_KEY_ESCAPE:
@@ -82,10 +85,6 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	}
 
 }
-
-
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
 
 static void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
 	const float cameraSpeed = 4.0f * deltaTime;
@@ -110,14 +109,16 @@ static void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
 		cameraPosition += glm::normalize(glm::cross(cameraDirection, worldUp)) * cameraSpeed;
 	}
 
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+		cameraPosition += worldUp * cameraSpeed;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+		cameraPosition -= worldUp * cameraSpeed;
+	}
+
 	camera.setPosition(cameraPosition);
 }
-
-
-
-float lastX = 640, lastY = 360;
-
-static float cameraRotation[3] = { 0.0f, 0.0f, -1.0f };
 
 static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 	if (!mouseEnabled) {
@@ -158,7 +159,6 @@ static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 	cameraRotation[1] = pitch;
 }
 
-
 int main() {
 	GLFWwindow* m_Window = nullptr;
 	unsigned int m_Width = 1280;
@@ -187,12 +187,10 @@ int main() {
 	glfwSetKeyCallback(m_Window, keyCallback);
 	glfwSetCursorPosCallback(m_Window, mouse_callback);
 
-	
-
 	glfwSwapInterval(1);
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		std::cout << "Failed to initialize GLAD" << std::endl;
+		LOGGER_ERROR("Failed to initialize GLAD");
 		return -1;
 	}
 
@@ -211,74 +209,65 @@ int main() {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad 
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 	ImGui::StyleColorsDark();
 
-	ImGui_ImplGlfw_InitForOpenGL(m_Window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+	ImGui_ImplGlfw_InitForOpenGL(m_Window, true);
 	ImGui_ImplOpenGL3_Init();
 
 	// GL Stuff
 
-	//auto cube = Object("./res/objects/cube.obj");
-	//auto teapot = rapidobj::ParseFile("./res/objects/cube.obj");
-	//LOGGER_TRACE(teapot.error.code.message());
-	//std::vector<unsigned int>* bufferIndices = new std::vector<unsigned int>;
+	Object teapot = Object("./res/objects/teapot.obj");
 
-	//for (size_t i = 0; i < teapot.shapes.size(); i++) {
-	//	auto& object = teapot.shapes.at(i);
 
-	//	for (size_t j = 0; j < object.mesh.indices.size(); j++) {
-	//		auto value = object.mesh.indices[j].position_index;
-	//		bufferIndices->push_back(value);
-	//	}
-	//}
+	ShaderProgram lightShader = ShaderProgram("./res/shader/light.vert", "./res/shader/light.frag");
+	Object lightCube = Object("./res/objects/cube.obj");
 
 
 	float vertices[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,  0.0f, 0.0f, -1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,  0.0f, 0.0f, -1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f, 0.0f, -1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f, 0.0f, -1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f, 0.0f, -1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,  0.0f, 0.0f, -1.0f,
+										   
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f, 0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, 0.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,  0.0f, 0.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,  0.0f, 0.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,  0.0f, 0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f, 0.0f, 1.0f,
+										   
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  1.0f, 0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  1.0f, 0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
+										   
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  1.0f, 0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  1.0f, 0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
+										   
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  0.0f, -1.0f,  0.0f,
 
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f, 1.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  0.0f, 1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  0.0f, 1.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,  0.0f, 1.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f, 1.0f,  0.0f
 	};
-
 	glm::vec3 cubePositions[] = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
 		glm::vec3(2.0f,  5.0f, -15.0f),
@@ -292,9 +281,8 @@ int main() {
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
-
-	ShaderProgram shader = ShaderProgram("./res/shader/default.vert", "./res/shader/default.frag");
-
+	ShaderProgram textureShader = ShaderProgram("./res/shader/default.vert", "./res/shader/default.frag");
+	Texture redstone = Texture("./res/textures/redstone_block.png");
 
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
@@ -306,16 +294,27 @@ int main() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+	
 	// texture coord attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	glm::vec3 v = glm::normalize(glm::vec3(0.0f, 0.0f, -3.0f) - glm::vec3(1.0f, 2.0f, 0.0f));
+	// Normal
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 
-	LOGGER_INFO("Look vector: {0}, {1}, {2}", v.x, v.y, v.z);
+	ShaderProgram flatColor = ShaderProgram("./res/shader/flat_color.vert", "./res/shader/flat_color.frag");
 	
+	// Vertices with normals
+	
+
+
+	
+
+
+
 	// Engine variables
 
 	Renderer renderer = Renderer();
@@ -323,7 +322,12 @@ int main() {
 	camera.setPosition({ 0.0f, 0.0f, 3.0f });
 	camera.setRotation({ -90.0f, 0.0f, -0.0f });
 
+	glm::vec3 teapotPos{};
+	glm::vec3 teapotColor = {0.2f, 0.6f, 0.3f};
+	glm::vec3 teapotRotation{};
 
+	glm::vec3 lightCubePos{};
+	glm::vec3 lightCubeColor = { 1.0f, 1.0f, 1.0f };
 
 	while (!glfwWindowShouldClose(m_Window)) {
 		
@@ -332,27 +336,57 @@ int main() {
 		lastFrame = currentFrame;
 
 		processInput(m_Window, camera, deltaTime);
+		camera.setRotation({ cameraRotation[0], cameraRotation[1], cameraRotation[2] });
+
+		teapot.setPosition(teapotPos);
+		teapot.setRotation(teapotRotation);
+
+		lightCube.setPosition(lightCubePos);
 
 		// GL CODE 
 		renderer.clear();
+
+		// Light Cube
+
+
+
+		// Teapot
+		flatColor.bind();
+		flatColor.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
+		flatColor.setUniformMatrix4fv("u_Model", teapot.getModelMatrix());
+		flatColor.setUniform3fv("u_ObjectColor", teapotColor);
+		flatColor.setUniform3fv("u_LightColor", lightCubeColor);
+		flatColor.setUniform3fv("u_LightPosition", lightCubePos);
+		flatColor.setUniform3fv("u_ViewPosition", camera.getPosition());
+
+		renderer.draw(teapot.getVertexArray(), teapot.getIndexBuffer());
+
+		glm::mat4 cubeModel = lightCube.getModelMatrix();
+		cubeModel = glm::scale(cubeModel, glm::vec3(0.2f, 0.2f, 0.2f));
+
+		lightShader.bind();
+		lightShader.setUniformMatrix4fv("u_Model", cubeModel);
+		lightShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
+		lightShader.setUniform3fv("u_ObjectColor", lightCubeColor);
 		
+		renderer.draw(lightCube.getVertexArray(), lightCube.getIndexBuffer());
 
-		camera.setRotation({ cameraRotation[0], cameraRotation[1], cameraRotation[2] });
 
+		// Cubes
+		textureShader.bind();
+		textureShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
+		//redstone.bind(0);
 
-		shader.bind();
-		shader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
-
-		
 		glBindVertexArray(VAO);
 		for (unsigned int i = 0; i < 10; i++) {
-			// calculate the model matrix for each object and pass it to shader before drawing
-			glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-			model = glm::translate(model, cubePositions[i]);
+			glm::mat4 model = glm::translate(glm::mat4(1.0f), cubePositions[i]);
 			float angle = 20.0f * i;
 			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-			shader.setUniformMatrix4fv("u_Model", model);
-
+			flatColor.bind();
+			flatColor.setUniformMatrix4fv("u_Model", model);
+			flatColor.setUniform3fv("u_ObjectColor", {0.8, 0.1, 0.1});
+			flatColor.setUniform3fv("u_LightColor", lightCubeColor);
+			flatColor.setUniform3fv("u_ViewPosition", camera.getPosition());
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
@@ -364,19 +398,46 @@ int main() {
 		// ImGUI Interface 
 		
 
-		ImGui::Begin("Info");
-		ImGui::Text("Camera Position (%.2f %.2f %.2f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
-		ImGui::Text("Camera Direction (%.2f %.2f %.2f)", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
-		ImGui::Text("Camera Euler (%.2f %.2f %.2f)", camera.getRotation().x, camera.getRotation().y, camera.getRotation().z);
+		ImGui::Begin("Camera Info:");
 
-		ImGui::SliderFloat3(" Camera Rotation", cameraRotation, -90.0f, 90.0f);
+		ImGui::Text("Position (%.2f %.2f %.2f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+		ImGui::Text("Direction (%.2f %.2f %.2f)", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
+		ImGui::Text("Euler (%.2f %.2f %.2f)", camera.getRotation().x, camera.getRotation().y, camera.getRotation().z);
 
 		ImGui::End();
+
+		ImGui::Begin("Teapot Info:");
+
+		ImGui::Text("Position (%.2f %.2f %.2f)", teapot.getPosition().x, teapot.getPosition().y, teapot.getPosition().z);
+		ImGui::SliderFloat3("Position", glm::value_ptr(teapotPos), -10.0f, 10.0f);
+		ImGui::SliderFloat3("Color", glm::value_ptr(teapotColor), 0.0f, 1.0f);
+		ImGui::SliderFloat3("Rotation", glm::value_ptr(teapotRotation), 0.0f, 360.0f);
+
+		ImGui::End();
+
+		ImGui::Begin("Light Info:");
+
+		ImGui::Text("Position (%.2f %.2f %.2f)", lightCube.getPosition().x, lightCube.getPosition().y, lightCube.getPosition().z);
+		ImGui::SliderFloat3("Position", glm::value_ptr(lightCubePos), -10.0f, 10.0f);
+		ImGui::SliderFloat3("Color", glm::value_ptr(lightCubeColor), 0.0f, 1.0f);
+
+		ImGui::End();
+		
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+
+		
 		glfwSwapBuffers(m_Window);
 		glfwPollEvents();
 	}
 }
+
+
+
+
+
+
+
+

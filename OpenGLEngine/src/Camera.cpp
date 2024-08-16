@@ -23,8 +23,6 @@ glm::vec3& Camera::getDirection() const {
 };
 
 void Camera::recalculateViewMatrix() {
-	
-	
 	m_ViewMatrix = glm::lookAt(
 		m_Position,
 		(m_Position + getDirection()),

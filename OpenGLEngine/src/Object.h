@@ -25,14 +25,18 @@ public:
 	Object(const char* path);
 	~Object();
 	
-	VertexArray getVertexArray() const { return m_VertexArray; };
-	IndexBuffer getIndexBuffer() const { return m_IndexBuffer; }
+	VertexArray& getVertexArray() { return m_VertexArray; };
+	IndexBuffer& getIndexBuffer() { return m_IndexBuffer; }
 
-	const glm::vec3& getPosition() { return m_Position; }
-	const glm::vec3& getRotation() { return m_Rotation; }
+	glm::vec3& getPosition() { return m_Position; }
+	glm::vec3& getRotation() { return m_Rotation; }
 
-	void setPosition(glm::vec3 position) { m_Position = position; }
-	void setRotation(glm::vec3 rotation) { m_Rotation = rotation; }
+	void setPosition(glm::vec3 position) {
+		m_Position = position; recalculateModelMatrix();
+	}
+	void setRotation(glm::vec3 rotation) {
+		m_Rotation = rotation; recalculateModelMatrix();
+	}
 
 	const glm::mat4& getModelMatrix() { return m_ModelMatrix; }
 

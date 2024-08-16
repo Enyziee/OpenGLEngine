@@ -24,10 +24,10 @@ Object::Object(const char* path) {
 	auto layout = VertexBufferLayout();
 	layout.Push<float>(3);
 	
-	//m_IndexBuffer.loadData(bufferIndices->data(), bufferIndices->size());
-	//m_VertexBuffer.loadData(m_Result.attributes.positions.data(), m_Result.attributes.positions.size());
+	m_IndexBuffer.loadData(bufferIndices->data(), bufferIndices->size());
+	m_VertexBuffer.loadData(m_Result.attributes.positions.data(), m_Result.attributes.positions.size());
 
-	//m_VertexArray.addData(m_VertexBuffer, layout);
+	m_VertexArray.addData(m_VertexBuffer, layout);
 
 	m_Position = glm::vec3(0.0f, 0.0f, 0.0f);
 	m_Rotation = glm::vec3(0.0f, 0.0f, 0.0f);

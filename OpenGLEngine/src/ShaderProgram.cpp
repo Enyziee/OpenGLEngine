@@ -43,18 +43,30 @@ void ShaderProgram::unbind() const {
     glUseProgram(0);
 }
 
-void ShaderProgram::setUniform4f(const char* uniform, float x, float y, float z, float a) const {
-    int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
-    glUniform4f(vLocation, x, y, z, a);
-}
-
 void ShaderProgram::setUniform1i(const char* uniform, int value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+    assert(uniformId);
+    
     glUniform1i(uniformId, value);
 }
 
-void ShaderProgram::setUniformMatrix4fv(const char* uniform, glm::mat4 value) const {
+void ShaderProgram::setUniform3fv(const char* uniform, const glm::vec3& value) const {
+    int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
+    assert(vLocation != -1);
+
+    glUniform3f(vLocation, value[0], value[1], value[2]);
+}
+
+void ShaderProgram::setUniform4fv(const char* uniform, const glm::vec4& value) const {
+    int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
+    assert(vLocation != -1);
+    
+    glUniform4fv(vLocation, 4, glm::value_ptr(value));
+}
+
+void ShaderProgram::setUniformMatrix4fv(const char* uniform, const glm::mat4& value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+    assert(uniformId != -1);
     glUniformMatrix4fv(uniformId, 1, GL_FALSE, glm::value_ptr(value));
 }
 

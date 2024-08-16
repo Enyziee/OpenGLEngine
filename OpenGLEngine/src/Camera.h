@@ -24,9 +24,9 @@ public:
 	
 	glm::vec3& getDirection() const;
 
-	const glm::mat4& getViewMatrix() { return m_ViewMatrix; }
-	const glm::mat4& getProjectionMatrix () { return m_ProjectionMatrix; }
-	const glm::mat4& getViewProjectionMatrix() { return m_ViewProjectionMatrix; }
+	glm::mat4& getViewMatrix() { return m_ViewMatrix; }
+	glm::mat4& getProjectionMatrix () { return m_ProjectionMatrix; }
+	glm::mat4& getViewProjectionMatrix() { return m_ViewProjectionMatrix; }
 private:
 	void recalculateViewMatrix();
 };
