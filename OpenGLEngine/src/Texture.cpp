@@ -1,25 +1,31 @@
 #include "Texture.h"
+#include <cassert>
 
 Texture::Texture(const char* path) {
 	stbi_set_flip_vertically_on_load(true);
 
-    m_LocalBuffer = stbi_load(path, &m_Width, &m_Height, &m_BPP, 4);
-    
-    glGenTextures(1, &m_RendererID);
-    glBindTexture(GL_TEXTURE_2D, m_RendererID);
+    stbi_uc* data = stbi_load(path, &m_Width, &m_Height, &m_Channels, 0);
+    assert(data);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_Width, m_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_LocalBuffer);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    if (m_LocalBuffer) {
-        stbi_image_free(m_LocalBuffer);
+    unsigned int internalFormat = 0, dataFormat = 0;
+    if (m_Channels == 4) {
+        internalFormat = GL_RGBA8;
+        dataFormat = GL_RGBA;
     }
+    else if (m_Channels == 3) {
+        internalFormat = GL_RGB8;
+        dataFormat = GL_RGB;
+    }
+
+    glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
+    glTextureStorage2D(m_RendererID, 1, internalFormat, m_Width, m_Height);
+
+    glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, dataFormat, GL_UNSIGNED_BYTE, data);
+
+    stbi_image_free(data);
 }
 
 Texture::~Texture() {
@@ -27,10 +33,5 @@ Texture::~Texture() {
 }
 
 void Texture::bind(unsigned int slot) const {
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, m_RendererID);
-}
-
-void Texture::unbind() {
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTextureUnit(slot, m_RendererID);
 }

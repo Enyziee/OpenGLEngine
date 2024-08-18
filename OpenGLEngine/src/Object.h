@@ -1,9 +1,7 @@
 #pragma once
 
 #include "rapidobj/rapidobj.hpp"
-#include "IndexBuffer.h"
-#include "VertexBuffer.h"
-#include "VertexArray.h"
+#include "Buffer.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -17,15 +15,10 @@ class Object {
 	rapidobj::Result m_Result;
 	std::filesystem::path m_Path;
 
-	VertexArray m_VertexArray;
 	IndexBuffer m_IndexBuffer;
 	VertexBuffer m_VertexBuffer;
 
 public:
-	Object(const char* path);
-	~Object();
-	
-	VertexArray& getVertexArray() { return m_VertexArray; };
 	IndexBuffer& getIndexBuffer() { return m_IndexBuffer; }
 
 	glm::vec3& getPosition() { return m_Position; }

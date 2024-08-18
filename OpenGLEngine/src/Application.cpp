@@ -5,9 +5,7 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include "pch.h"
 
 #include <rapidobj/rapidobj.hpp>
 
@@ -15,8 +13,8 @@
 #include "Camera.h"
 #include "Renderer.h"
 #include "ShaderProgram.h"
-#include "Object.h"
 #include "Texture.h"
+#include "Buffer.h"
 
 static float cameraRotation[3] = { -90.0f, 0.0f, 0.0f };
 
@@ -64,7 +62,6 @@ static void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, 
 	case GL_DEBUG_SEVERITY_NOTIFICATION: std::cout << "Severity: notification"; break;
 	} std::cout << std::endl;
 }
-
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	switch (key) {
 	case GLFW_KEY_ESCAPE:
@@ -85,7 +82,6 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	}
 
 }
-
 static void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
 	const float cameraSpeed = 4.0f * deltaTime;
 
@@ -119,7 +115,6 @@ static void processInput(GLFWwindow* window, Camera& camera, float deltaTime) {
 
 	camera.setPosition(cameraPosition);
 }
-
 static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 	if (!mouseEnabled) {
 		return;
@@ -159,39 +154,36 @@ static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 	cameraRotation[1] = pitch;
 }
 
-int main() {
-	GLFWwindow* m_Window = nullptr;
-	unsigned int m_Width = 1280;
-	unsigned int m_Height = 720;
-
-	Logger::Init();
+static GLFWwindow* setupApp(uint32_t height, uint32_t width) {
+	GLFWwindow* window;
+	
 	
 	if (!glfwInit()) {
 		LOGGER_ERROR("Failed to initialize GLFW");
-		return -1;
+		return nullptr;
 	}
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
-	m_Window = glfwCreateWindow(m_Width, m_Height, "Hello World", NULL, NULL);
-	if (!m_Window) {
+	window = glfwCreateWindow(width, height, "Hello World", NULL, NULL);
+	if (!window) {
 		LOGGER_ERROR("Failed to create GLFW Window");
 		glfwTerminate();
-		return -1;
+		return nullptr;
 	}
 
-	glfwMakeContextCurrent(m_Window);
-	glfwSetKeyCallback(m_Window, keyCallback);
-	glfwSetCursorPosCallback(m_Window, mouse_callback);
+	glfwMakeContextCurrent(window);
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetCursorPosCallback(window, mouse_callback);
 
 	glfwSwapInterval(1);
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		LOGGER_ERROR("Failed to initialize GLAD");
-		return -1;
+		return nullptr;
 	}
 
 	int flags = 0;
@@ -204,7 +196,7 @@ int main() {
 	}
 
 	glEnable(GL_DEPTH_TEST);
-	glViewport(0, 0, m_Width, m_Height);
+	glViewport(0, 0, width, height);
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -213,60 +205,85 @@ int main() {
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 	ImGui::StyleColorsDark();
 
-	ImGui_ImplGlfw_InitForOpenGL(m_Window, true);
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
+
+	return window;
+}
+
+static GLenum ShaderDataTypeToGLType(ShaderDataType type) {
+	switch (type) {
+	case ShaderDataType::Float:  return GL_FLOAT;
+	case ShaderDataType::Float2: return GL_FLOAT;
+	case ShaderDataType::Float3: return GL_FLOAT;
+	case ShaderDataType::Float4: return GL_FLOAT;
+
+	case ShaderDataType::Mat3:   return GL_FLOAT;
+	case ShaderDataType::Mat4:   return GL_FLOAT;
+
+	case ShaderDataType::Int:    return GL_INT;
+	case ShaderDataType::Int2:   return GL_INT;
+	case ShaderDataType::Int3:   return GL_INT;
+	case ShaderDataType::Int4:   return GL_INT;
+	case ShaderDataType::Bool:   return GL_BOOL;
+	}
+
+	assert(false);
+	return 0;
+}
+
+int main() {
+	GLFWwindow* m_Window = nullptr;
+	unsigned int m_Width = 1280;
+	unsigned int m_Height = 720;
+
+	Logger::Init();
+	
+	m_Window = setupApp(m_Height, m_Width);
+	assert(m_Window);
 
 	// GL Stuff
 
-	Object teapot = Object("./res/objects/teapot.obj");
-
-
-	ShaderProgram lightShader = ShaderProgram("./res/shader/light.vert", "./res/shader/light.frag");
-	Object lightCube = Object("./res/objects/cube.obj");
-
+	glm::vec3 lightPos = { 0.0f, 0.0f, 0.0f };
+	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
 	float vertices[] = {
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,  0.0f, 0.0f, -1.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,  0.0f, 0.0f, -1.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f, 0.0f, -1.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f, 0.0f, -1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f, 0.0f, -1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,  0.0f, 0.0f, -1.0f,
-										   
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f, 0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, 0.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,  0.0f, 0.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,  0.0f, 0.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,  0.0f, 0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f, 0.0f, 1.0f,
-										   
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  1.0f, 0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  1.0f, 0.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
-										   
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  1.0f, 0.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  1.0f, 0.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  1.0f, 0.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  1.0f, 0.0f,  0.0f,
-										   
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, -1.0f,  0.0f,
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,  0.0f, -1.0f,  0.0f,
-
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f, 1.0f,  0.0f,
-		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  0.0f, 1.0f,  0.0f,
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,  0.0f, 1.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,  0.0f, 1.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  0.0f, 1.0f,  0.0f
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 	};
 	glm::vec3 cubePositions[] = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
@@ -281,39 +298,20 @@ int main() {
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
-	ShaderProgram textureShader = ShaderProgram("./res/shader/default.vert", "./res/shader/default.frag");
-	Texture redstone = Texture("./res/textures/redstone_block.png");
-
-	unsigned int VAO;
-	glGenVertexArrays(1, &VAO);
-	glBindVertexArray(VAO);
-
-	unsigned int VBO;
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	auto va = VertexArray();
+	auto vao = VertexBuffer(vertices, sizeof(vertices) / sizeof(float));
+	BufferLayout layout = {
+		{ ShaderDataType::Float3, "a_Position"},
+		{ ShaderDataType::Float3, "a_Normals"},
+	};
+	vao.setLayout(layout);
+	va.addVertexBuffers(vao);
 	
-	// texture coord attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	// Normal
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	ShaderProgram flatColor = ShaderProgram("./res/shader/flat_color.vert", "./res/shader/flat_color.frag");
 	
-	// Vertices with normals
-	
+	// ++++++++++
 
-
-	
-
-
+	ShaderProgram phongShader = ShaderProgram("./res/shader/lighting");
+	ShaderProgram flatShader = ShaderProgram("./res/shader/flatColor");
 
 	// Engine variables
 
@@ -322,13 +320,7 @@ int main() {
 	camera.setPosition({ 0.0f, 0.0f, 3.0f });
 	camera.setRotation({ -90.0f, 0.0f, -0.0f });
 
-	glm::vec3 teapotPos{};
-	glm::vec3 teapotColor = {0.2f, 0.6f, 0.3f};
-	glm::vec3 teapotRotation{};
-
-	glm::vec3 lightCubePos{};
-	glm::vec3 lightCubeColor = { 1.0f, 1.0f, 1.0f };
-
+	
 	while (!glfwWindowShouldClose(m_Window)) {
 		
 		float currentFrame = glfwGetTime();
@@ -338,94 +330,68 @@ int main() {
 		processInput(m_Window, camera, deltaTime);
 		camera.setRotation({ cameraRotation[0], cameraRotation[1], cameraRotation[2] });
 
-		teapot.setPosition(teapotPos);
-		teapot.setRotation(teapotRotation);
-
-		lightCube.setPosition(lightCubePos);
 
 		// GL CODE 
 		renderer.clear();
 
 		// Light Cube
 
+		flatShader.bind();
+		flatShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
+		flatShader.setUniformMatrix4fv("u_Model", glm::translate(glm::mat4(1.0f), lightPos));
+		flatShader.setUniform3fv("u_ObjectColor", lightColor);
+
+		va.bind();
 
 
-		// Teapot
-		flatColor.bind();
-		flatColor.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
-		flatColor.setUniformMatrix4fv("u_Model", teapot.getModelMatrix());
-		flatColor.setUniform3fv("u_ObjectColor", teapotColor);
-		flatColor.setUniform3fv("u_LightColor", lightCubeColor);
-		flatColor.setUniform3fv("u_LightPosition", lightCubePos);
-		flatColor.setUniform3fv("u_ViewPosition", camera.getPosition());
-
-		renderer.draw(teapot.getVertexArray(), teapot.getIndexBuffer());
-
-		glm::mat4 cubeModel = lightCube.getModelMatrix();
-		cubeModel = glm::scale(cubeModel, glm::vec3(0.2f, 0.2f, 0.2f));
-
-		lightShader.bind();
-		lightShader.setUniformMatrix4fv("u_Model", cubeModel);
-		lightShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
-		lightShader.setUniform3fv("u_ObjectColor", lightCubeColor);
-		
-		renderer.draw(lightCube.getVertexArray(), lightCube.getIndexBuffer());
-
-
+		renderer.drawArrays(va);
 		// Cubes
-		textureShader.bind();
-		textureShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
-		//redstone.bind(0);
+		
 
-		glBindVertexArray(VAO);
 		for (unsigned int i = 0; i < 10; i++) {
 			glm::mat4 model = glm::translate(glm::mat4(1.0f), cubePositions[i]);
 			float angle = 20.0f * i;
 			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-			flatColor.bind();
-			flatColor.setUniformMatrix4fv("u_Model", model);
-			flatColor.setUniform3fv("u_ObjectColor", {0.8, 0.1, 0.1});
-			flatColor.setUniform3fv("u_LightColor", lightCubeColor);
-			flatColor.setUniform3fv("u_ViewPosition", camera.getPosition());
-			glDrawArrays(GL_TRIANGLES, 0, 36);
+			
+			phongShader.bind();
+			phongShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());			
+			phongShader.setUniformMatrix4fv("u_Model", model);
+
+			phongShader.setUniform3fv("u_LightColor", lightColor);
+			phongShader.setUniform3fv("u_ObjectColor", { 1.0f, 0.0f, 0.0f });
+			
+			phongShader.setUniform3fv("u_ViewPosition", camera.getPosition());
+
+			renderer.drawArrays(va);
 		}
 
 
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
+		//ImGui_ImplOpenGL3_NewFrame();
+		//ImGui_ImplGlfw_NewFrame();
+		//ImGui::NewFrame();
 
-		// ImGUI Interface 
-		
+		//// ImGUI Interface 
+		//
 
-		ImGui::Begin("Camera Info:");
+		//ImGui::Begin("Camera Info:");
 
-		ImGui::Text("Position (%.2f %.2f %.2f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
-		ImGui::Text("Direction (%.2f %.2f %.2f)", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
-		ImGui::Text("Euler (%.2f %.2f %.2f)", camera.getRotation().x, camera.getRotation().y, camera.getRotation().z);
+		//ImGui::Text("Position (%.2f %.2f %.2f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+		//ImGui::Text("Direction (%.2f %.2f %.2f)", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
+		//ImGui::Text("Euler (%.2f %.2f %.2f)", camera.getRotation().x, camera.getRotation().y, camera.getRotation().z);
 
-		ImGui::End();
+		//ImGui::End();
 
-		ImGui::Begin("Teapot Info:");
+		//ImGui::Begin("Light Info:");
 
-		ImGui::Text("Position (%.2f %.2f %.2f)", teapot.getPosition().x, teapot.getPosition().y, teapot.getPosition().z);
-		ImGui::SliderFloat3("Position", glm::value_ptr(teapotPos), -10.0f, 10.0f);
-		ImGui::SliderFloat3("Color", glm::value_ptr(teapotColor), 0.0f, 1.0f);
-		ImGui::SliderFloat3("Rotation", glm::value_ptr(teapotRotation), 0.0f, 360.0f);
+		////ImGui::Text("Position (%.2f %.2f %.2f)", lightCubeObj.getPosition().x, lightCubeObj.getPosition().y, lightCubeObj.getPosition().z);
+		////ImGui::SliderFloat3("Position", glm::value_ptr(lightCubePos), -10.0f, 10.0f);
+		////ImGui::SliderFloat3("Color", glm::value_ptr(lightCubeColor), 0.0f, 1.0f);
 
-		ImGui::End();
+		//ImGui::End();
+		//
 
-		ImGui::Begin("Light Info:");
-
-		ImGui::Text("Position (%.2f %.2f %.2f)", lightCube.getPosition().x, lightCube.getPosition().y, lightCube.getPosition().z);
-		ImGui::SliderFloat3("Position", glm::value_ptr(lightCubePos), -10.0f, 10.0f);
-		ImGui::SliderFloat3("Color", glm::value_ptr(lightCubeColor), 0.0f, 1.0f);
-
-		ImGui::End();
-		
-
-		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		//ImGui::Render();
+		//ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 
 		
@@ -433,11 +399,3 @@ int main() {
 		glfwPollEvents();
 	}
 }
-
-
-
-
-
-
-
-

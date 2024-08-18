@@ -4,15 +4,17 @@ Renderer::Renderer() {}
 
 Renderer::~Renderer() {}
 
-void Renderer::draw(const VertexArray& va, const IndexBuffer& ib) {
-    va.bind();
+void Renderer::draw(const VertexBuffer& vb, const IndexBuffer& ib) {
+    vb.bind();
     ib.bind();
     
     glDrawElements(GL_TRIANGLES, ib.getCount() , GL_UNSIGNED_INT, (const void*)0);
 }
 
-void Renderer::drawArrays(const VertexArray& va) {
+void Renderer::drawArrays(VertexArray& va) {
+    va.bind();    
 
+    glDrawArrays(GL_TRIANGLES, 0, 216);
 }
 
 void Renderer::clear() {

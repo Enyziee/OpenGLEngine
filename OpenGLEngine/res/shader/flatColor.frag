@@ -2,6 +2,9 @@
 
 out vec4 FragColor;
 
+//in vec2 v_TexCoord;
+in vec3 v_Normal;
+
 uniform vec3 u_ObjectColor;
 
 void main() {

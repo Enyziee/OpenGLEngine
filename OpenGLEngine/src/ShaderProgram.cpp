@@ -3,32 +3,51 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Log.h"
 
-ShaderProgram::ShaderProgram(std::string vertPath, std::string fragPath) {
+ShaderProgram::ShaderProgram(std::string filePath) : m_RendererID(0) {
+    auto vertPath = std::string(filePath + ".vert");
+    auto fragPath = std::string(filePath + ".frag");
+
     std::string vertexSource = parseShaderFile(vertPath);
     std::string fragmentSource = parseShaderFile(fragPath);
 
-    unsigned int  vertex = compileShader(vertexSource, GL_VERTEX_SHADER);
-    unsigned int  frag = compileShader(fragmentSource, GL_FRAGMENT_SHADER);
+    if (vertexSource.size() == 0) {
+        LOGGER_ERROR("Cannot read file shader: {0}", vertPath);
+        return;
+    }
 
-    m_RendererID = glCreateProgram();
-    std::cout << "Created shader program ID: " << m_RendererID << std::endl;
+    unsigned int vertex = compileShader(vertexSource, GL_VERTEX_SHADER);
+    unsigned int frag = compileShader(fragmentSource, GL_FRAGMENT_SHADER);
 
+    if (!vertex || !frag) {
+        m_RendererID = 0;
+        return;
+    }
 
-    glAttachShader(m_RendererID, vertex);
-    glAttachShader(m_RendererID, frag);
-    glLinkProgram(m_RendererID);
+    unsigned int program = glCreateProgram();
+
+    glAttachShader(program, vertex);
+    glAttachShader(program, frag);
+    
+    glLinkProgram(program);
 
     int sucess;
-    glGetProgramiv(m_RendererID, GL_LINK_STATUS, &sucess);
+    glGetProgramiv(program, GL_LINK_STATUS, &sucess);
     if (!sucess) {
         char infoLog[512];
-        glGetProgramInfoLog(m_RendererID, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
+        glGetProgramInfoLog(program, 512, NULL, infoLog);
+        LOGGER_ERROR("Shader linking failed: {0}", infoLog);
     }
+
+    m_RendererID = program;
+
+    glDetachShader(program, vertex);
+    glDetachShader(program, frag);
 
     glDeleteShader(vertex);
     glDeleteShader(frag);
+    
 }
 
 ShaderProgram::~ShaderProgram() {
@@ -45,41 +64,29 @@ void ShaderProgram::unbind() const {
 
 void ShaderProgram::setUniform1i(const char* uniform, int value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
-    assert(uniformId);
-    
     glUniform1i(uniformId, value);
 }
 
 void ShaderProgram::setUniform3fv(const char* uniform, const glm::vec3& value) const {
     int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
-    assert(vLocation != -1);
-
     glUniform3f(vLocation, value[0], value[1], value[2]);
 }
 
 void ShaderProgram::setUniform4fv(const char* uniform, const glm::vec4& value) const {
     int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
-    assert(vLocation != -1);
-    
     glUniform4fv(vLocation, 4, glm::value_ptr(value));
 }
 
 void ShaderProgram::setUniformMatrix4fv(const char* uniform, const glm::mat4& value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
-    assert(uniformId != -1);
     glUniformMatrix4fv(uniformId, 1, GL_FALSE, glm::value_ptr(value));
 }
 
 std::string ShaderProgram::parseShaderFile(std::string shaderPath) {
     std::ifstream sourceFile(shaderPath);
 
-    if (!sourceFile) {
-        std::cout << "Cannot open the file" << std::endl;
-    }
-
     std::string line;
     std::stringstream ss;
-
 
     while (getline(sourceFile, line)) {
         ss << line << '\n';
@@ -100,16 +107,7 @@ unsigned int ShaderProgram::compileShader(std::string shaderSource, unsigned int
     if (!sucess) {
         char infoLog[512];
         glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        std::cerr << "Shader compilation failed\n" << infoLog << std::endl;
-    }
-
-    if (type == GL_VERTEX_SHADER) {
-        std::cout << "Created Vertex Shader ID: " << shader << std::endl;
-    } else if (type == GL_FRAGMENT_SHADER) {
-        std::cout << "Created Fragment Shader ID: " << shader << std::endl;
-    }
-    else {
-        std::cout << "Created Unknown Shader ID: " << shader << std::endl;
+        LOGGER_ERROR("Shader compilation failed {0}", infoLog);
     }
 
     return shader;

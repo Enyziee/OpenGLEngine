@@ -5,15 +5,13 @@
 
 class Texture {
 	unsigned int m_RendererID;
-	unsigned char* m_LocalBuffer;
 	int m_Height;
 	int m_Width;
-	int m_BPP;
+	int m_Channels;
 
 public:
 	Texture(const char* path);
 	~Texture();
 
-	void bind(unsigned int slot) const;
-	void unbind();
+	void bind(unsigned int slot = 0) const;
 };

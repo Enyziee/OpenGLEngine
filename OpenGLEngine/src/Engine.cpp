@@ -63,7 +63,7 @@ void Engine::run() {
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	ShaderProgram shader = ShaderProgram("./res/shader/default.vert", "./res/shader/default.frag");
+	ShaderProgram shader = ShaderProgram("./res/shader/default");
 	shader.bind();
 
 	camera.setPosition({0.0f, 0.0f, 3.0f});

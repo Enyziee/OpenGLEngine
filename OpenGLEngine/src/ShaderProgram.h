@@ -17,7 +17,7 @@ class ShaderProgram {
 
 public:
     
-    ShaderProgram(std::string vertPath, std::string fragPath);
+    ShaderProgram(std::string filePath);
     ~ShaderProgram();
 
     void bind() const;
