@@ -25,6 +25,8 @@ public:
 
     void setUniform1i(const char* uniform, int value) const;
 
+    void setUniform1f(const char* uniform, GLfloat value) const;
+
     void setUniform3fv(const char* uniform, const glm::vec3& value) const;
     void setUniform4fv(const char* uniform, const glm::vec4& value) const;
     

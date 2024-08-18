@@ -15,6 +15,7 @@
 #include "ShaderProgram.h"
 #include "Texture.h"
 #include "Buffer.h"
+#include "Object.h"
 
 static float cameraRotation[3] = { -90.0f, 0.0f, 0.0f };
 
@@ -64,14 +65,11 @@ static void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, 
 }
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	switch (key) {
-	case GLFW_KEY_ESCAPE:
-		glfwSetWindowShouldClose(window, true);
-		break;
-	case GLFW_KEY_1:
+	case GLFW_KEY_LEFT_ALT:
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		mouseEnabled = true;
 		break;
-	case GLFW_KEY_2:
+	case GLFW_KEY_ESCAPE:
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		mouseEnabled = false;
 		firstMouse = true;
@@ -244,8 +242,7 @@ int main() {
 
 	// GL Stuff
 
-	glm::vec3 lightPos = { 0.0f, 0.0f, 0.0f };
-	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
+
 
 	float vertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -307,11 +304,17 @@ int main() {
 	vao.setLayout(layout);
 	va.addVertexBuffers(vao);
 	
+	glm::vec3 lightPos = { 0.0f, 1.5f, 0.0f };
+	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 	
+	Object lightCubeObj;
+	lightCubeObj.setPosition(lightPos);
+
+
 	// ++++++++++
 
-	ShaderProgram phongShader = ShaderProgram("./res/shader/lighting");
-	ShaderProgram flatShader = ShaderProgram("./res/shader/flatColor");
+	ShaderProgram phongShader = ShaderProgram("./assets/shader/lighting");
+	ShaderProgram flatShader = ShaderProgram("./assets/shader/flatColor");
 
 	// Engine variables
 
@@ -320,7 +323,17 @@ int main() {
 	camera.setPosition({ 0.0f, 0.0f, 3.0f });
 	camera.setRotation({ -90.0f, 0.0f, -0.0f });
 
-	
+	glm::vec3 cubesColor({ 0.7f, 0.2f, 0.5f });
+
+	glm::vec3 mat_ambient = glm::vec3( 1.0f, 0.5f, 0.31f );
+	glm::vec3 mat_diffuse = glm::vec3( 1.0f, 0.5f, 0.31f );
+	glm::vec3 mat_specular = glm::vec3( 0.5f, 0.5f, 0.5f );
+	float mat_shininess = 32.0f;
+
+	glm::vec3 light_ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+	glm::vec3 light_diffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	glm::vec3 light_specular = glm::vec3(1.0f, 1.0f, 1.0f);
+
 	while (!glfwWindowShouldClose(m_Window)) {
 		
 		float currentFrame = glfwGetTime();
@@ -329,7 +342,7 @@ int main() {
 
 		processInput(m_Window, camera, deltaTime);
 		camera.setRotation({ cameraRotation[0], cameraRotation[1], cameraRotation[2] });
-
+		lightCubeObj.setPosition(lightPos);
 
 		// GL CODE 
 		renderer.clear();
@@ -338,11 +351,8 @@ int main() {
 
 		flatShader.bind();
 		flatShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());
-		flatShader.setUniformMatrix4fv("u_Model", glm::translate(glm::mat4(1.0f), lightPos));
+		flatShader.setUniformMatrix4fv("u_Model", glm::scale(lightCubeObj.getModelMatrix(), glm::vec3(0.2f, 0.2f, 0.2f)));
 		flatShader.setUniform3fv("u_ObjectColor", lightColor);
-
-		va.bind();
-
 
 		renderer.drawArrays(va);
 		// Cubes
@@ -357,41 +367,57 @@ int main() {
 			phongShader.setUniformMatrix4fv("u_ViewProjection", camera.getViewProjectionMatrix());			
 			phongShader.setUniformMatrix4fv("u_Model", model);
 
-			phongShader.setUniform3fv("u_LightColor", lightColor);
-			phongShader.setUniform3fv("u_ObjectColor", { 1.0f, 0.0f, 0.0f });
+			phongShader.setUniform3fv("light.position", lightPos);
+			phongShader.setUniform3fv("light.ambient", light_ambient);
+			phongShader.setUniform3fv("light.diffuse", light_diffuse);
+			phongShader.setUniform3fv("light.specular", light_specular);
 			
-			phongShader.setUniform3fv("u_ViewPosition", camera.getPosition());
-
+			phongShader.setUniform3fv("material.ambient", mat_ambient);
+			phongShader.setUniform3fv("material.diffuse", mat_diffuse);
+			phongShader.setUniform3fv("material.specular", mat_specular);
+			phongShader.setUniform1f("material.shininess", mat_shininess);
+			
 			renderer.drawArrays(va);
 		}
 
 
-		//ImGui_ImplOpenGL3_NewFrame();
-		//ImGui_ImplGlfw_NewFrame();
-		//ImGui::NewFrame();
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
-		//// ImGUI Interface 
-		//
+		// ImGUI Interface 
+		
 
-		//ImGui::Begin("Camera Info:");
+		ImGui::Begin("Camera Info:");
 
-		//ImGui::Text("Position (%.2f %.2f %.2f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
-		//ImGui::Text("Direction (%.2f %.2f %.2f)", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
-		//ImGui::Text("Euler (%.2f %.2f %.2f)", camera.getRotation().x, camera.getRotation().y, camera.getRotation().z);
+		ImGui::Text("Position (%.2f %.2f %.2f)", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+		ImGui::Text("Direction (%.2f %.2f %.2f)", camera.getDirection().x, camera.getDirection().y, camera.getDirection().z);
+		ImGui::Text("Euler (%.2f %.2f %.2f)", camera.getRotation().x, camera.getRotation().y, camera.getRotation().z);
 
-		//ImGui::End();
+		ImGui::End();
 
-		//ImGui::Begin("Light Info:");
+		ImGui::Begin("Light Info:");
 
-		////ImGui::Text("Position (%.2f %.2f %.2f)", lightCubeObj.getPosition().x, lightCubeObj.getPosition().y, lightCubeObj.getPosition().z);
-		////ImGui::SliderFloat3("Position", glm::value_ptr(lightCubePos), -10.0f, 10.0f);
-		////ImGui::SliderFloat3("Color", glm::value_ptr(lightCubeColor), 0.0f, 1.0f);
+		ImGui::Text("Position (%.2f %.2f %.2f)", lightCubeObj.getPosition().x, lightCubeObj.getPosition().y, lightCubeObj.getPosition().z);
+		ImGui::SliderFloat3("Position", glm::value_ptr(lightPos), -10.0f, 10.0f);
+		ImGui::ColorEdit3("Ambient", glm::value_ptr(light_ambient));
+		ImGui::ColorEdit3("Diffuse", glm::value_ptr(light_diffuse));
+		ImGui::ColorEdit3("Specular", glm::value_ptr(light_specular));
+		
+		ImGui::End();
 
-		//ImGui::End();
-		//
+		ImGui::Begin("Material Info:");
 
-		//ImGui::Render();
-		//ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		ImGui::ColorEdit3("Ambient", glm::value_ptr(mat_ambient));
+		ImGui::ColorEdit3("Diffuse", glm::value_ptr(mat_diffuse));
+		ImGui::ColorEdit3("Specular", glm::value_ptr(mat_specular));
+		ImGui::SliderFloat("Shininess", &mat_shininess, 0.0f, 256.0f);
+
+		ImGui::End();
+		
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 
 		

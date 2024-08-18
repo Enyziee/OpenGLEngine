@@ -64,21 +64,55 @@ void ShaderProgram::unbind() const {
 
 void ShaderProgram::setUniform1i(const char* uniform, int value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+
+    if (uniformId < 0) {
+        LOGGER_WARN("Uniform {0} not found, ShaderID: {1}", uniform, m_RendererID);
+        return;
+    }
     glUniform1i(uniformId, value);
 }
 
+void ShaderProgram::setUniform1f(const char* uniform, GLfloat value) const {
+    int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+    
+    if (uniformId < 0) {
+        LOGGER_WARN("Uniform {0} not found, ShaderID: {1}", uniform, m_RendererID);
+        return;
+    }
+
+    glUniform1f(uniformId, value);
+}
+
 void ShaderProgram::setUniform3fv(const char* uniform, const glm::vec3& value) const {
-    int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
-    glUniform3f(vLocation, value[0], value[1], value[2]);
+    int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+    
+    if (uniformId < 0) {
+        LOGGER_WARN("Uniform {0} not found, ShaderID: {1}", uniform, m_RendererID);
+        return;
+    }
+
+    glUniform3f(uniformId, value[0], value[1], value[2]);
 }
 
 void ShaderProgram::setUniform4fv(const char* uniform, const glm::vec4& value) const {
-    int vLocation = glGetUniformLocation(this->m_RendererID, uniform);
-    glUniform4fv(vLocation, 4, glm::value_ptr(value));
+    int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+
+    if (uniformId < 0) {
+        LOGGER_WARN("Uniform {0} not found, ShaderID: {1}", uniform, m_RendererID);
+        return;
+    }
+
+    glUniform4f(uniformId, value[0], value[1], value[2], value[3]);
 }
 
 void ShaderProgram::setUniformMatrix4fv(const char* uniform, const glm::mat4& value) const {
     int uniformId = glGetUniformLocation(this->m_RendererID, uniform);
+
+    if (uniformId < 0) {
+        LOGGER_WARN("Uniform {0} not found, ShaderID: {1}", uniform, m_RendererID);
+        return;
+    }
+
     glUniformMatrix4fv(uniformId, 1, GL_FALSE, glm::value_ptr(value));
 }
 

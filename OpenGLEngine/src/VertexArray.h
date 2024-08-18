@@ -22,8 +22,8 @@ public:
 	void addVertexBuffers(VertexBuffer& vertexBuffer);
 	void setIndexBuffer(IndexBuffer& indexBuffer);
 
-	VertexBuffer getVertexBuffers() const { return m_VertexBuffer; };
-	IndexBuffer getIndexBuffer() const { return m_IndexBuffer; };
+	const VertexBuffer& getVertexBuffers() const { return m_VertexBuffer; };
+	const IndexBuffer& getIndexBuffer() const { return m_IndexBuffer; };
 
 
 };

@@ -12,9 +12,14 @@ void Renderer::draw(const VertexBuffer& vb, const IndexBuffer& ib) {
 }
 
 void Renderer::drawArrays(VertexArray& va) {
-    va.bind();    
+    va.bind();
 
-    glDrawArrays(GL_TRIANGLES, 0, 216);
+    auto& buff = va.getVertexBuffers();
+    int count = buff.getCount();
+
+    glDrawArrays(GL_TRIANGLES, 0, count);
+
+    
 }
 
 void Renderer::clear() {

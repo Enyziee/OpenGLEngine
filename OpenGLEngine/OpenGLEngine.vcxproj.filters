@@ -457,11 +457,11 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\shader\default.frag" />
-    <None Include="res\shader\default.vert" />
-    <None Include="res\shader\lighting.vert" />
-    <None Include="res\shader\lighting.frag" />
-    <None Include="res\shader\flatColor.vert" />
-    <None Include="res\shader\flatColor.frag" />
+    <None Include="assets\shader\default.frag" />
+    <None Include="assets\shader\default.vert" />
+    <None Include="assets\shader\lighting.vert" />
+    <None Include="assets\shader\lighting.frag" />
+    <None Include="assets\shader\flatColor.vert" />
+    <None Include="assets\shader\flatColor.frag" />
   </ItemGroup>
 </Project>
